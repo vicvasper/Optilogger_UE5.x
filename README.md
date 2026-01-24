@@ -5,6 +5,17 @@
 [![Version](https://img.shields.io/badge/Version-1.0-orange.svg)](https://github.com/yourusername/OptiLogger/releases)
 
 
+## Screenshots
+
+![Where is located]</br></br>
+<img width="389" height="769" alt="image" src="https://github.com/user-attachments/assets/59fda0ef-4f9b-4d3d-ba44-68174d9beddc" /></br>
+*Here is where you can access the plugin.*
+</br></br></br>
+
+![Main Window]</br></br>
+<img width="951" height="578" alt="image" src="https://github.com/user-attachments/assets/b3054e8d-1926-48c1-afa3-bbdb4a587aae" /></br>
+*The main screen, with all the information on it.*
+
 # OptiLogger
 
 Non-intrusive resource analysis and optimization plugin for Unreal Engine 5.x. Provides comprehensive analysis of static meshes, skeletal meshes, textures, materials, animations, audio, lighting, and post-process effects with JSON export functionality.
@@ -280,13 +291,4 @@ For bug reports, feature requests, or contributions, please open an issue on Git
 - Portfolio: [vicvasper.github.io/README](https://vicvasper.github.io/README/)
 - LinkedIn: [linkedin.com/in/victorrivasperez](https://www.linkedin.com/in/victorrivasperez/)
 
-## Screenshots
 
-![Where is located]</br></br>
-<img width="389" height="769" alt="image" src="https://github.com/user-attachments/assets/59fda0ef-4f9b-4d3d-ba44-68174d9beddc" /></br>
-*Here is where you can access the plugin.*
-</br></br></br>
-
-![Main Window]</br></br>
-<img width="951" height="578" alt="image" src="https://github.com/user-attachments/assets/b3054e8d-1926-48c1-afa3-bbdb4a587aae" /></br>
-*The main screen, with all the information on it.*
