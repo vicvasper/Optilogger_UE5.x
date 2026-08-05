@@ -1,6 +1,7 @@
 // OptiloggerSubsystem.cpp
 #include "OptiloggerSubsystem.h"
 #include "ResourceAnalyzer.h"
+#include "OptiLogger.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Input/Events.h"
 #include "InputCoreTypes.h"
@@ -19,7 +20,7 @@ void UOptiloggerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     ResourceAnalyzer = NewObject<UResourceAnalyzer>(this);
     if (ResourceAnalyzer) ResourceAnalyzer->Initialize();
     SetupInputHandling();
-    UE_LOG(LogTemp, Log, TEXT("Optilogger: Initialized"));
+    UE_LOG(LogOptiLogger, Log, TEXT("Optilogger: Initialized"));
 }
 
 void UOptiloggerSubsystem::Deinitialize()
@@ -31,7 +32,7 @@ void UOptiloggerSubsystem::Deinitialize()
         ResourceAnalyzer->ClearAnalysisResults();
     }
     
-    UE_LOG(LogTemp, Log, TEXT("Optilogger Subsystem: Deinitialize completed"));
+    UE_LOG(LogOptiLogger, Log, TEXT("Optilogger Subsystem: Deinitialize completed"));
 }
 
 void UOptiloggerSubsystem::SetupInputHandling()
@@ -69,7 +70,7 @@ void UOptiloggerSubsystem::SetupInputHandling()
     }
 
     bInputHandlingEnabled = true;
-    UE_LOG(LogTemp, Log, TEXT("Optilogger Subsystem: Input handling setup completed"));
+    UE_LOG(LogOptiLogger, Log, TEXT("Optilogger Subsystem: Input handling setup completed"));
 }
 
 void UOptiloggerSubsystem::CleanupInputHandling()
@@ -94,7 +95,7 @@ void UOptiloggerSubsystem::CleanupInputHandling()
     KeyMappings.Empty();
     bInputHandlingEnabled = false;
     
-    UE_LOG(LogTemp, Log, TEXT("Optilogger Subsystem: Input handling cleanup completed"));
+    UE_LOG(LogOptiLogger, Log, TEXT("Optilogger Subsystem: Input handling cleanup completed"));
 }
 
 void UOptiloggerSubsystem::HandleKeyPress(const FKeyEvent& KeyEvent)
@@ -137,7 +138,7 @@ void UOptiloggerSubsystem::ProcessInputCommand(const FKey& Key)
     
     FString Command = KeyMappings[Key];
     
-    UE_LOG(LogTemp, Log, TEXT("Optilogger Subsystem: Processing input command: %s"), *Command);
+    UE_LOG(LogOptiLogger, Log, TEXT("Optilogger Subsystem: Processing input command: %s"), *Command);
     
     // Execute the appropriate command
     if (Command == TEXT("AnalyzeCurrentLevel"))

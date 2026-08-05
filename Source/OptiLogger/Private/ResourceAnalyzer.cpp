@@ -1,4 +1,5 @@
 #include "ResourceAnalyzer.h"
+#include "OptiLogger.h"
 #include "Engine/World.h"
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
@@ -51,18 +52,18 @@ UResourceAnalyzer::UResourceAnalyzer()
 void UResourceAnalyzer::Initialize()
 {
     ClearAnalysisResults();
-    UE_LOG(LogTemp, Log, TEXT("Optilogger: ResourceAnalyzer initialized successfully"));
+    UE_LOG(LogOptiLogger, Log, TEXT("Optilogger: ResourceAnalyzer initialized successfully"));
 }
 
 void UResourceAnalyzer::AnalyzeCurrentLevel(bool bFilterVisible)
 {
-    UE_LOG(LogTemp, Log, TEXT("Optilogger: Starting comprehensive level analysis. Filter Visible: %s"), bFilterVisible ? TEXT("True") : TEXT("False"));
+    UE_LOG(LogOptiLogger, Log, TEXT("Optilogger: Starting comprehensive level analysis. Filter Visible: %s"), bFilterVisible ? TEXT("True") : TEXT("False"));
     ClearAnalysisResults();
 
     UWorld* CurrentWorld = GetAnalysisWorld();
     if (!CurrentWorld)
     {
-        UE_LOG(LogTemp, Error, TEXT("Optilogger: FATAL - No valid world found for analysis. Cannot proceed."));
+        UE_LOG(LogOptiLogger, Error, TEXT("Optilogger: FATAL - No valid world found for analysis. Cannot proceed."));
         return;
     }
 
@@ -75,7 +76,7 @@ void UResourceAnalyzer::AnalyzeCurrentLevel(bool bFilterVisible)
     AnalyzeLighting(bFilterVisible);
     AnalyzePostProcessEffects(bFilterVisible);
 
-    UE_LOG(LogTemp, Log, TEXT("Optilogger: Level analysis finished. Check results. If empty, review previous logs."));
+    UE_LOG(LogOptiLogger, Log, TEXT("Optilogger: Level analysis finished. Check results. If empty, review previous logs."));
 }
 
 // Fragmento para ResourceAnalyzer.cpp (reemplaza la definición de GetAnalysisWorld())
@@ -93,7 +94,7 @@ UWorld* UResourceAnalyzer::GetAnalysisWorld() const
             return EditorWorld;
         }
     }
-    UE_LOG(LogTemp, Error, TEXT("Optilogger: GEditor is invalid or cannot provide a world."));
+    UE_LOG(LogOptiLogger, Error, TEXT("Optilogger: GEditor is invalid or cannot provide a world."));
     return nullptr;
 #else
     if (GEngine)
@@ -102,7 +103,7 @@ UWorld* UResourceAnalyzer::GetAnalysisWorld() const
         {
             if (Context.WorldType == EWorldType::Game)
             {
-                UE_LOG(LogTemp, Log, TEXT("Optilogger: Using Game world for analysis"));
+                UE_LOG(LogOptiLogger, Log, TEXT("Optilogger: Using Game world for analysis"));
                 return Context.World();
             }
         }
@@ -153,7 +154,7 @@ void UResourceAnalyzer::AnalyzeStaticMeshes(bool bFilterVisible)
     }
 
     if (ActorCount == 0) {
-        UE_LOG(LogTemp, Warning, TEXT("Optilogger: Found 0 actors in the world. Analysis will be empty."));
+        UE_LOG(LogOptiLogger, Warning, TEXT("Optilogger: Found 0 actors in the world. Analysis will be empty."));
     }
 
     for (UStaticMesh* Mesh : FoundMeshes)
@@ -170,7 +171,7 @@ void UResourceAnalyzer::AnalyzeSkeletalMeshes(bool bFilterVisible)
     UWorld* World = GetAnalysisWorld();
     if (!World)
     {
-        UE_LOG(LogTemp, Error, TEXT("Optilogger: No valid world found for skeletal mesh analysis."));
+        UE_LOG(LogOptiLogger, Error, TEXT("Optilogger: No valid world found for skeletal mesh analysis."));
         return;
     }
 
@@ -200,7 +201,7 @@ void UResourceAnalyzer::AnalyzeTextures(bool bFilterVisible)
 
     TextureAnalysisResults.Empty();
 
-    UWorld* World = GetAnalysisWorld(); if (!World) { UE_LOG(LogTemp, Error, TEXT("No valid world for texture analysis.")); return; }
+    UWorld* World = GetAnalysisWorld(); if (!World) { UE_LOG(LogOptiLogger, Error, TEXT("No valid world for texture analysis.")); return; }
 
     TSet<UTexture2D*> Found;
     for (TActorIterator<AActor> It(World); It; ++It)
@@ -234,7 +235,7 @@ void UResourceAnalyzer::AnalyzeMaterials(bool bFilterVisible)
     UWorld* World = GetAnalysisWorld();
     if (!World)
     {
-        UE_LOG(LogTemp, Error, TEXT("Optilogger: No valid world found for material analysis."));
+        UE_LOG(LogOptiLogger, Error, TEXT("Optilogger: No valid world found for material analysis."));
         return;
     }
 
@@ -273,7 +274,7 @@ void UResourceAnalyzer::AnalyzeAnimations(bool bFilterVisible)
     AnimationAnalysisResults.Empty();
 
     UWorld* World = GetAnalysisWorld();
-    if (!World) { UE_LOG(LogTemp, Error, TEXT("No valid world for animation analysis.")); return; }
+    if (!World) { UE_LOG(LogOptiLogger, Error, TEXT("No valid world for animation analysis.")); return; }
 
     TSet<UAnimSequence*> FoundAnims;
     TSet<USkeleton*> SkeletonsInUse;
@@ -344,7 +345,7 @@ void UResourceAnalyzer::AnalyzeAudio(bool bFilterVisible)
     AudioAnalysisResults.Empty();
 
     UWorld* World = GetAnalysisWorld();
-    if (!World) { UE_LOG(LogTemp, Error, TEXT("No valid world for audio analysis.")); return; }
+    if (!World) { UE_LOG(LogOptiLogger, Error, TEXT("No valid world for audio analysis.")); return; }
 
     TSet<USoundWave*> Found;
     for (TActorIterator<AActor> It(World); It; ++It)
@@ -374,7 +375,7 @@ void UResourceAnalyzer::AnalyzeLighting(bool bFilterVisible)
 
     LightingAnalysisResults.Empty();
 
-    UWorld* World = GetAnalysisWorld(); if (!World) { UE_LOG(LogTemp, Error, TEXT("No valid world for lighting analysis.")); return; }
+    UWorld* World = GetAnalysisWorld(); if (!World) { UE_LOG(LogOptiLogger, Error, TEXT("No valid world for lighting analysis.")); return; }
 
     for (TActorIterator<ALight> It(World); It; ++It)
     {
@@ -389,7 +390,7 @@ void UResourceAnalyzer::AnalyzePostProcessEffects(bool bFilterVisible)
 
     PostProcessAnalysisResults.Empty();
 
-    UWorld* World = GetAnalysisWorld(); if (!World) { UE_LOG(LogTemp, Error, TEXT("No valid world for post-process analysis.")); return; }
+    UWorld* World = GetAnalysisWorld(); if (!World) { UE_LOG(LogOptiLogger, Error, TEXT("No valid world for post-process analysis.")); return; }
 
     for (TActorIterator<APostProcessVolume> It(World); It; ++It)
     {
@@ -788,7 +789,7 @@ FPostProcessAnalysisData UResourceAnalyzer::AnalyzePostProcessVolume(APostProces
 
 bool UResourceAnalyzer::ExportAnalysisToJSON(const FString& FilePath)
 {
-    UE_LOG(LogTemp, Log, TEXT("Optilogger: Exporting analysis results to JSON"));
+    UE_LOG(LogOptiLogger, Log, TEXT("Optilogger: Exporting analysis results to JSON"));
     
     TSharedPtr<FJsonObject> RootObject = MakeShareable(new FJsonObject);
     
@@ -876,11 +877,11 @@ bool UResourceAnalyzer::ExportAnalysisToJSON(const FString& FilePath)
     
     if (bSuccess)
     {
-        UE_LOG(LogTemp, Log, TEXT("Optilogger: Analysis report exported to: %s"), *FinalFilePath);
+        UE_LOG(LogOptiLogger, Log, TEXT("Optilogger: Analysis report exported to: %s"), *FinalFilePath);
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("Optilogger: Failed to export analysis report to: %s"), *FinalFilePath);
+        UE_LOG(LogOptiLogger, Error, TEXT("Optilogger: Failed to export analysis report to: %s"), *FinalFilePath);
     }
     
     return bSuccess;
