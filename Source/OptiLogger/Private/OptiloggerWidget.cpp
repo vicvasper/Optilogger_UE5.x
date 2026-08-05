@@ -469,9 +469,10 @@ FReply SOptiloggerWidget::OnClearResultsClicked()
     if (UResourceAnalyzer* Analyzer = GetResourceAnalyzer())
     {
         Analyzer->ClearAnalysisResults();
-        if(UOptiloggerSubsystem* Subsystem = GetOptiloggerSubsystem())
+        if (UOptiloggerSubsystem* Subsystem = GetOptiloggerSubsystem())
         {
-            Subsystem->LastAnalysisType = TEXT("");
+            // Was reaching in and assigning the subsystem's public LastAnalysisType field.
+            Subsystem->ClearAnalysisState();
         }
         RefreshDisplay();
         StatusTextBlock->SetText(LOCTEXT("ResultsCleared", "Analysis results cleared"));
