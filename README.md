@@ -106,8 +106,17 @@ Access OptiLogger through:
 - **Post-Process** (Ctrl+NumPad0): Active effects and their configuration
 
 #### Additional Controls
-- **F5**: Refresh current analysis
-- **F6**: Toggle on-screen display overlay
+- **Ctrl+F5**: Refresh current analysis
+- **Ctrl+F6**: Toggle on-screen display overlay
+
+> These two were bound to bare **F5** and **F6** in earlier versions. Because the handler is
+> installed on Slate's pre-input listener, that made them fire from anywhere in the editor —
+> including while typing into a text field — so pressing F5 could start a full level analysis
+> unprompted. They now require Ctrl, like every other binding.
+
+> Opening the OptiLogger tab no longer runs an analysis automatically. The pass is synchronous
+> and blocks the editor for its duration, which is a surprising cost for opening a panel. Press
+> **Analyze Level** when you want one.
 
 ### Understanding Results
 
