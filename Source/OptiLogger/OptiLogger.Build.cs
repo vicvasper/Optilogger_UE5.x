@@ -1,5 +1,6 @@
+// Copyright (c) Victor Rivas Perez. All Rights Reserved.
+
 using UnrealBuildTool;
-using System.IO;
 
 public class OptiLogger : ModuleRules
 {
@@ -7,17 +8,38 @@ public class OptiLogger : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] {
-			"Core", "CoreUObject", "Engine",
-			"Slate", "SlateCore", "InputCore",
-			"ToolMenus", "UnrealEd", "LevelEditor",
-			"EditorStyle", "AssetRegistry",
+		// The module is declared Type "Editor" in OptiLogger.uplugin, so the editor
+		// dependencies below need no bBuildEditor guard - it is never built otherwise.
+		PublicDependencyModuleNames.AddRange(new string[]
+		{
+			"Core",
+			"CoreUObject",
+			"Engine",
+
+			// Slate UI
+			"InputCore",
+			"Slate",
+			"SlateCore",
+
+			// Editor integration
+			"AssetRegistry",
+			"EditorSubsystem",
+			"LevelEditor",
+			"MaterialEditor",
+			"ToolMenus",
 			"UnrealEd",
-			"EditorSubsystem", "MaterialEditor"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] {
-			"Json", "JsonUtilities", "Projects", "RenderCore", "RHI"
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			"Json",
+			"JsonUtilities",
+			"Projects",
+			"RenderCore",
+			"RHI",
 		});
+
+		// "UnrealEd" was listed twice in the public list. "EditorStyle" was also listed; it is
+		// a deprecated shim in UE5 whose contents moved into SlateCore and EditorWidgets.
 	}
 }

@@ -6,6 +6,8 @@
 #include "Widgets/Docking/SDockTab.h"
 #include "OptiloggerWidget.h"
 
+DEFINE_LOG_CATEGORY(LogOptiLogger);
+
 static const FName OptiLoggerTabName("OptiLogger");
 
 #define LOCTEXT_NAMESPACE "FOptiLogger"
@@ -38,7 +40,7 @@ void FOptiLogger::StartupModule()
     .SetDisplayName(LOCTEXT("OptiLoggerTabTitle", "OptiLogger"))
     .SetMenuType(ETabSpawnerMenuType::Hidden);
 
-    UE_LOG(LogTemp, Log, TEXT("OptiLogger Plugin: Startup"));
+    UE_LOG(LogOptiLogger, Log, TEXT("OptiLogger started."));
 }
 
 void FOptiLogger::ShutdownModule()
@@ -52,7 +54,7 @@ void FOptiLogger::ShutdownModule()
     FOptiloggerCommands::Unregister();
     FOptiloggerStyle::Shutdown();
 
-    UE_LOG(LogTemp, Log, TEXT("OptiLogger Plugin: Shutdown"));
+    UE_LOG(LogOptiLogger, Log, TEXT("OptiLogger shut down."));
 }
 
 void FOptiLogger::PluginButtonClicked()

@@ -1,0 +1,20 @@
+# Unreal Engine build output. These are regenerated from source on every build and are
+# machine- and engine-version-specific, so committing them only creates merge conflicts and
+# bloats clones.
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# Generated project files
+*.sln
+*.suo
+*.xcodeproj
+*.xcworkspace
+.vs/
+.vscode/
+
+# OS noise
+.DS_Store
+Thumbs.db

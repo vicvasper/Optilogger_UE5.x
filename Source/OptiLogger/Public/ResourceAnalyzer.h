@@ -32,8 +32,11 @@ struct FStaticMeshAnalysisData
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Analysis")
     TArray<int32> LODTriangleCounts;
 
+    // Every other member of these structs carries an initialiser; FVector and FLinearColor
+    // default-construct uninitialised in Unreal, so omitting one here meant reading garbage
+    // for any asset an analysis pass skipped or failed on.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Analysis")
-    FVector BoundingBoxSize;
+    FVector BoundingBoxSize = FVector::ZeroVector;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Analysis")
     float EstimatedMemoryUsageMB = 0.0f;
@@ -58,11 +61,10 @@ struct FSkeletalMeshAnalysisData
     int32 LODCount = 0;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Analysis")
-    FVector BoundingBoxSize;
-    
+    FVector BoundingBoxSize = FVector::ZeroVector;
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Analysis")
     float EstimatedMemoryUsageMB = 0.0f;
-    
 };
 
 // Estructura de datos para el análisis de Texturas
@@ -201,7 +203,7 @@ struct FLightingAnalysisData
     float Intensity = 0.0f;
     
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Analysis")
-    FLinearColor LightColor;
+    FLinearColor LightColor = FLinearColor::Black;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Analysis")
     float AttenuationRadius = 0.0f;
@@ -238,14 +240,11 @@ struct FPostProcessAnalysisData
     TArray<FString> ActiveEffects;
 };
 
-// API export/import macro
-#ifndef OPTILOGGERRUNTIME_API
-#if defined(OPTILOGGERRUNTIME_MODULE)
-#define OPTILOGGERRUNTIME_API __declspec(dllexport)
-#else
-#define OPTILOGGERRUNTIME_API __declspec(dllimport)
-#endif
-#endif
+// A hand-written OPTILOGGERRUNTIME_API macro used to live here, defined as __declspec of
+// dllexport or dllimport. It was removed: UnrealBuildTool generates the <MODULE>_API macro for
+// every module - which is where OPTILOGGER_API below comes from - so this one shadowed nothing,
+// was referenced by no declaration, named a module that does not exist, and would not have
+// compiled outside MSVC.
 
 UCLASS()
 class OPTILOGGER_API UResourceAnalyzer : public UObject
