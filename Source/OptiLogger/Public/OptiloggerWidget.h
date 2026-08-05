@@ -1,124 +1,139 @@
+// Copyright (c) Victor Rivas Perez. All Rights Reserved.
+
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Styling/SlateTypes.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Views/SListView.h"
-#include "Styling/SlateTypes.h"
-#include "ResourceAnalyzer.h"
-#include "OptiloggerSubsystem.h"
+#include "Widgets/Views/STableRow.h"
 
+class ITableRow;
+class STableViewBase;
 class STextBlock;
 class UOptiloggerSubsystem;
 class UResourceAnalyzer;
-class ITableRow;
-class STableViewBase;
 
+/** One row in the results list. */
 struct FAnalysisResultItem
 {
-    FString Name;
-    FString Type;
-    FString Details;
-    float MemoryUsageMB;
-    FLinearColor StatusColor;
+	FString Name;
+	FString Type;
+	FString Details;
+	float MemoryUsageMB = 0.0f;
+	FLinearColor StatusColor = FLinearColor::White;
 
-    FAnalysisResultItem(const FString& InName, const FString& InType, const FString& InDetails, float InMemoryUsageMB, const FLinearColor& InStatusColor)
-        : Name(InName), Type(InType), Details(InDetails), MemoryUsageMB(InMemoryUsageMB), StatusColor(InStatusColor) {}
+	FAnalysisResultItem(const FString& InName, const FString& InType, const FString& InDetails,
+		float InMemoryUsageMB, const FLinearColor& InStatusColor)
+		: Name(InName)
+		, Type(InType)
+		, Details(InDetails)
+		, MemoryUsageMB(InMemoryUsageMB)
+		, StatusColor(InStatusColor)
+	{
+	}
 };
 
+/**
+ * The OptiLogger tab: analysis buttons, a running summary, and a sortable list of the assets
+ * the last pass found. All work is delegated to UOptiloggerSubsystem; this widget only
+ * presents it.
+ */
 class SOptiloggerWidget : public SCompoundWidget
 {
 public:
-    SLATE_BEGIN_ARGS(SOptiloggerWidget) {}
-    SLATE_END_ARGS()
+	SLATE_BEGIN_ARGS(SOptiloggerWidget) {}
+	SLATE_END_ARGS()
 
-    void Construct(const FArguments& InArgs);
-    virtual ~SOptiloggerWidget();
+	void Construct(const FArguments& InArgs);
 
-    virtual TSharedRef<ITableRow> OnGenerateRowForAnalysisResult(
-        TSharedPtr<FAnalysisResultItem> Item,
-        const TSharedRef<STableViewBase>& OwnerTable);
-    virtual TSharedRef<SWidget> OnGenerateWidgetForColumn(
-        TSharedPtr<FAnalysisResultItem> Item,
-        const FName& ColumnId) const;
+	/** Rebuilds the results list and summary from the analyzer's current state. */
+	void RefreshDisplay();
 
-    void RefreshDisplay();
-    void TriggerAnalysisAndRefreshUI(const FString& AnalysisType);
+	/** Runs an analysis by identifier and refreshes the UI. */
+	void TriggerAnalysisAndRefreshUI(const FString& AnalysisType);
+
+	/** Builds the cell widget for one column. Called by SAnalysisResultRow. */
+	TSharedRef<SWidget> OnGenerateWidgetForColumn(TSharedPtr<FAnalysisResultItem> Item, const FName& ColumnId) const;
 
 private:
-    TSharedRef<SWidget> CreateToolbar();
-    TSharedRef<SWidget> CreateSummaryPanel();
-    TSharedRef<SWidget> CreateControlsPanel();
-    TSharedRef<SWidget> CreateAnalysisResultsPanel();
+	TSharedRef<SWidget> CreateToolbar();
+	TSharedRef<SWidget> CreateSummaryPanel();
+	TSharedRef<SWidget> CreateControlsPanel();
+	TSharedRef<SWidget> CreateAnalysisResultsPanel();
 
-    FReply OnAnalyzeCurrentLevelClicked();
-    FReply OnAnalyzeStaticMeshesClicked();
-    FReply OnAnalyzeSkeletalMeshesClicked();
-    FReply OnAnalyzeTexturesClicked();
-    FReply OnAnalyzeMaterialsClicked();
-    FReply OnAnalyzeAnimationsClicked();
-    FReply OnAnalyzeAudioClicked();
-    FReply OnAnalyzeLightingClicked();
-    FReply OnAnalyzePostProcessClicked();
-    FReply OnExportReportClicked();
-    FReply OnClearResultsClicked();
-    FReply OnRefreshClicked();
+	TSharedRef<ITableRow> OnGenerateRowForAnalysisResult(TSharedPtr<FAnalysisResultItem> Item, const TSharedRef<STableViewBase>& OwnerTable);
 
-    ECheckBoxState IsFilterChecked() const;
-    void OnFilterChanged(ECheckBoxState NewState);
+	/**
+	 * Handler for every analysis button.
+	 *
+	 * Replaces nine methods whose entire body was one call differing only in a string literal;
+	 * the analysis type is bound as a payload on the delegate instead.
+	 */
+	FReply OnAnalysisTypeClicked(FString AnalysisType);
 
-    void PopulateAnalysisResults();
-    UOptiloggerSubsystem* GetOptiloggerSubsystem() const;
-    UResourceAnalyzer* GetResourceAnalyzer() const;
-    bool IsAnalyzerAvailable() const;
-    
-    FText GetAnalysisSummaryText() const;
-    FLinearColor GetMemoryUsageColor(float MemoryUsageMB) const;
-    FString FormatMemorySize(float MemoryMB) const;
+	FReply OnExportReportClicked();
+	FReply OnClearResultsClicked();
+	FReply OnRefreshClicked();
 
-    void OnAnalysisComplete();
+	ECheckBoxState IsFilterChecked() const;
+	void OnFilterChanged(ECheckBoxState NewState);
 
-private:
+	void PopulateAnalysisResults();
 
-    UOptiloggerSubsystem* OptiloggerSubsystem;
-    TSharedPtr<SListView<TSharedPtr<FAnalysisResultItem>>> AnalysisResultsListView;
-    TSharedPtr<STextBlock> SummaryTextBlock;
-    TSharedPtr<STextBlock> StatusTextBlock;
+	UOptiloggerSubsystem* GetOptiloggerSubsystem() const;
+	UResourceAnalyzer* GetResourceAnalyzer() const;
+	bool IsAnalyzerAvailable() const;
 
-    TArray<TSharedPtr<FAnalysisResultItem>> AnalysisResultItems;
+	FText GetAnalysisSummaryText() const;
+	FLinearColor GetMemoryUsageColor(float MemoryUsageMB) const;
+	FString FormatMemorySize(float MemoryMB) const;
 
-    FSlateFontInfo HeaderFont;
-    FSlateFontInfo NormalFont;
-    FSlateFontInfo SmallFont;
-    FLinearColor HeaderColor;
-    FLinearColor NormalTextColor;
-    FLinearColor WarningColor;
-    FLinearColor ErrorColor;
-    FLinearColor SuccessColor;
+	/**
+	 * Weak, not raw.
+	 *
+	 * An SWidget is not a UObject, so a raw pointer stored here is invisible to the garbage
+	 * collector: nothing keeps the subsystem alive and nothing clears the pointer when it goes.
+	 */
+	TWeakObjectPtr<UOptiloggerSubsystem> OptiloggerSubsystem;
+
+	TSharedPtr<SListView<TSharedPtr<FAnalysisResultItem>>> AnalysisResultsListView;
+	TSharedPtr<STextBlock> SummaryTextBlock;
+	TSharedPtr<STextBlock> StatusTextBlock;
+
+	TArray<TSharedPtr<FAnalysisResultItem>> AnalysisResultItems;
+
+	FSlateFontInfo HeaderFont;
+	FSlateFontInfo NormalFont;
+	FSlateFontInfo SmallFont;
 };
 
-class SAnalysisResultRow
-  : public SMultiColumnTableRow<TSharedPtr<FAnalysisResultItem>>
+/** Multi-column row delegating its cells back to the owning widget. */
+class SAnalysisResultRow : public SMultiColumnTableRow<TSharedPtr<FAnalysisResultItem>>
 {
 public:
-    SLATE_BEGIN_ARGS(SAnalysisResultRow) {}
-    SLATE_ARGUMENT(TSharedPtr<FAnalysisResultItem>, Item)
-    SLATE_ARGUMENT(SOptiloggerWidget*, OwnerWidget)
-    SLATE_END_ARGS()
+	SLATE_BEGIN_ARGS(SAnalysisResultRow) {}
+		SLATE_ARGUMENT(TSharedPtr<FAnalysisResultItem>, Item)
+		SLATE_ARGUMENT(TWeakPtr<SOptiloggerWidget>, OwnerWidget)
+	SLATE_END_ARGS()
 
-    void Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& OwnerTable)
-    {
-        MyItem = InArgs._Item;
-        Owner   = InArgs._OwnerWidget;
-        SMultiColumnTableRow<TSharedPtr<FAnalysisResultItem>>::Construct(
-            FTableRowArgs(), OwnerTable);
-    }
+	void Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& OwnerTable)
+	{
+		Item = InArgs._Item;
+		OwnerWidget = InArgs._OwnerWidget;
 
-    virtual TSharedRef<SWidget> GenerateWidgetForColumn(const FName& ColumnName) override
-    {
-        return Owner->OnGenerateWidgetForColumn(MyItem, ColumnName);
-    }
+		SMultiColumnTableRow<TSharedPtr<FAnalysisResultItem>>::Construct(FTableRowArgs(), OwnerTable);
+	}
+
+	virtual TSharedRef<SWidget> GenerateWidgetForColumn(const FName& ColumnName) override
+	{
+		// Weak: rows outlive their owner during teardown, and the previous raw back-pointer
+		// was dereferenced without a check.
+		const TSharedPtr<SOptiloggerWidget> Owner = OwnerWidget.Pin();
+		return Owner.IsValid() ? Owner->OnGenerateWidgetForColumn(Item, ColumnName) : SNullWidget::NullWidget;
+	}
 
 private:
-    TSharedPtr<FAnalysisResultItem> MyItem;
-    SOptiloggerWidget*              Owner;
+	TSharedPtr<FAnalysisResultItem> Item;
+	TWeakPtr<SOptiloggerWidget> OwnerWidget;
 };

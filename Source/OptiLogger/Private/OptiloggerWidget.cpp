@@ -1,7 +1,7 @@
 #include "OptiloggerWidget.h"
 #include "OptiloggerSubsystem.h"
 #include "ResourceAnalyzer.h"
-#include "Editor.h" // Para GEditor
+#include "Editor.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
@@ -20,19 +20,43 @@
 
 #define LOCTEXT_NAMESPACE "OptiloggerWidget"
 
+namespace
+{
+	// -- Typography ------------------------------------------------------------------------
+	constexpr int32 HeaderFontSize = 14;
+	constexpr int32 NormalFontSize = 10;
+	constexpr int32 SmallFontSize = 8;
+
+	// -- Palette ---------------------------------------------------------------------------
+	const FLinearColor HeaderColor(0.8f, 0.8f, 1.0f);
+	const FLinearColor NormalTextColor(0.9f, 0.9f, 0.9f);
+	const FLinearColor WarningColor(1.0f, 0.8f, 0.0f);
+	const FLinearColor ErrorColor(1.0f, 0.3f, 0.3f);
+	const FLinearColor SuccessColor(0.3f, 1.0f, 0.3f);
+
+	// -- Memory reporting ------------------------------------------------------------------
+	//
+	// Thresholds at which a single asset's estimated footprint changes colour in the list.
+	// Tuned for per-asset figures, not for a whole level.
+
+	constexpr float MemoryColorLowMB = 1.0f;
+	constexpr float MemoryColorModerateMB = 10.0f;
+	constexpr float MemoryColorHighMB = 50.0f;
+
+	/** Unit boundaries for FormatMemorySize; also the MB<->KB and MB<->GB conversion factor. */
+	constexpr float KilobytesPerMegabyte = 1024.0f;
+	constexpr float MegabytesPerGigabyte = 1024.0f;
+}
+
 void SOptiloggerWidget::Construct(const FArguments& InArgs)
 {
-    OptiloggerSubsystem = GEditor->GetEditorSubsystem<UOptiloggerSubsystem>();
-    
-    HeaderFont = FCoreStyle::GetDefaultFontStyle("Bold", 14);
-    NormalFont = FCoreStyle::GetDefaultFontStyle("Regular", 10);
-    SmallFont = FCoreStyle::GetDefaultFontStyle("Regular", 8);
+	// Guarded: GEditor is null in a commandlet or during early startup, and the result was
+	// dereferenced unconditionally a few lines below.
+	OptiloggerSubsystem = GEditor ? GEditor->GetEditorSubsystem<UOptiloggerSubsystem>() : nullptr;
 
-    HeaderColor = FLinearColor(0.8f, 0.8f, 1.0f);
-    NormalTextColor = FLinearColor(0.9f, 0.9f, 0.9f);
-    WarningColor = FLinearColor(1.0f, 0.8f, 0.0f);
-    ErrorColor = FLinearColor(1.0f, 0.3f, 0.3f);
-    SuccessColor = FLinearColor(0.3f, 1.0f, 0.3f);
+    HeaderFont = FCoreStyle::GetDefaultFontStyle("Bold", HeaderFontSize);
+    NormalFont = FCoreStyle::GetDefaultFontStyle("Regular", NormalFontSize);
+    SmallFont = FCoreStyle::GetDefaultFontStyle("Regular", SmallFontSize);
 
     ChildSlot
     [
@@ -125,34 +149,36 @@ void SOptiloggerWidget::Construct(const FArguments& InArgs)
         ]
     ];
 
-    // Initial population of results
-    PopulateAnalysisResults();
-
-    OptiloggerSubsystem->TriggerAnalysis(TEXT("CurrentLevel"));
-    RefreshDisplay();
-}
-
-SOptiloggerWidget::~SOptiloggerWidget()
-{
+	// Shows whatever the analyzer already holds. Opening the tab no longer kicks off a full
+	// level analysis: that pass is synchronous and blocks the editor, which is a surprising
+	// cost for merely opening a panel. The user presses "Analyze Level" when they want it.
+	RefreshDisplay();
 }
 
 void SOptiloggerWidget::TriggerAnalysisAndRefreshUI(const FString& AnalysisType)
 {
-    if (IsAnalyzerAvailable())
-    {
-        // 1. Mostrar mensaje de estado
-        FText StatusMessage = FText::Format(LOCTEXT("AnalyzingType", "Analyzing {0}..."), FText::FromString(AnalysisType));
-        StatusTextBlock->SetText(StatusMessage);
+	UOptiloggerSubsystem* Subsystem = GetOptiloggerSubsystem();
+	if (!Subsystem)
+	{
+		return;
+	}
 
-        // 2. Ejecutar el análisis en el subsistema
-        OptiloggerSubsystem->TriggerAnalysis(AnalysisType);
+	// The analysis runs synchronously on this thread, so no frame is presented while it works
+	// and an "Analyzing..." message set here would never appear. Only the outcome is reported.
+	Subsystem->TriggerAnalysis(AnalysisType);
+	RefreshDisplay();
 
-        // 3. Refrescar la visualización del widget 
-        RefreshDisplay();
+	if (StatusTextBlock.IsValid())
+	{
+		StatusTextBlock->SetText(FText::Format(
+			LOCTEXT("AnalysisComplete", "Analyzed {0}"), FText::FromString(AnalysisType)));
+	}
+}
 
-        // 4. Actualizar mensaje de estado a completado
-        StatusTextBlock->SetText(LOCTEXT("AnalysisComplete", "Analysis Complete!"));
-    }
+FReply SOptiloggerWidget::OnAnalysisTypeClicked(FString AnalysisType)
+{
+	TriggerAnalysisAndRefreshUI(AnalysisType);
+	return FReply::Handled();
 }
 
 TSharedRef<SWidget> SOptiloggerWidget::CreateToolbar()
@@ -163,7 +189,7 @@ TSharedRef<SWidget> SOptiloggerWidget::CreateToolbar()
             SNew(SButton)
             .Text(LOCTEXT("AnalyzeLevel", "Analyze Level"))
             .ToolTipText(LOCTEXT("AnalyzeLevelTooltip", "Analyze all resources in the current level (Ctrl+NumPad1)"))
-            .OnClicked(this, &SOptiloggerWidget::OnAnalyzeCurrentLevelClicked)
+            .OnClicked(FOnClicked::CreateSP(this, &SOptiloggerWidget::OnAnalysisTypeClicked, FString(TEXT("CurrentLevel"))))
             .IsEnabled(this, &SOptiloggerWidget::IsAnalyzerAvailable)
         ]
 
@@ -195,17 +221,6 @@ TSharedRef<SWidget> SOptiloggerWidget::CreateToolbar()
                 SNew(STextBlock).Text(LOCTEXT("FilterVisible", "Visible Only"))
             ]
         ];
-}
-
-void SOptiloggerWidget::OnAnalysisComplete()
-{
-    RefreshDisplay(); 
-}
-
-FReply SOptiloggerWidget::OnAnalyzeCurrentLevelClicked()
-{
-    TriggerAnalysisAndRefreshUI(TEXT("CurrentLevel"));
-    return FReply::Handled();
 }
 
 TSharedRef<SWidget> SOptiloggerWidget::CreateSummaryPanel()
@@ -277,7 +292,7 @@ TSharedRef<SWidget> SOptiloggerWidget::CreateControlsPanel()
                         SNew(SButton)
                         .Text(LOCTEXT("StaticMeshes", "Static Meshes"))
                         .ToolTipText(LOCTEXT("StaticMeshesTooltip", "Analyze static mesh resources (Ctrl+NumPad3)"))
-                        .OnClicked(this, &SOptiloggerWidget::OnAnalyzeStaticMeshesClicked)
+                        .OnClicked(FOnClicked::CreateSP(this, &SOptiloggerWidget::OnAnalysisTypeClicked, FString(TEXT("StaticMeshes"))))
                         .HAlign(HAlign_Fill)
                     ]
 
@@ -286,7 +301,7 @@ TSharedRef<SWidget> SOptiloggerWidget::CreateControlsPanel()
                         SNew(SButton)
                         .Text(LOCTEXT("SkeletalMeshes", "Skeletal Meshes"))
                         .ToolTipText(LOCTEXT("SkeletalMeshesTooltip", "Analyze skeletal mesh resources (Ctrl+NumPad4)"))
-                        .OnClicked(this, &SOptiloggerWidget::OnAnalyzeSkeletalMeshesClicked)
+                        .OnClicked(FOnClicked::CreateSP(this, &SOptiloggerWidget::OnAnalysisTypeClicked, FString(TEXT("SkeletalMeshes"))))
                         .HAlign(HAlign_Fill)
                     ]
 
@@ -296,7 +311,7 @@ TSharedRef<SWidget> SOptiloggerWidget::CreateControlsPanel()
                         SNew(SButton)
                         .Text(LOCTEXT("Textures", "Textures"))
                         .ToolTipText(LOCTEXT("TexturesTooltip", "Analyze texture resources (Ctrl+NumPad5)"))
-                        .OnClicked(this, &SOptiloggerWidget::OnAnalyzeTexturesClicked)
+                        .OnClicked(FOnClicked::CreateSP(this, &SOptiloggerWidget::OnAnalysisTypeClicked, FString(TEXT("Textures"))))
                         .HAlign(HAlign_Fill)
                     ]
 
@@ -305,7 +320,7 @@ TSharedRef<SWidget> SOptiloggerWidget::CreateControlsPanel()
                         SNew(SButton)
                         .Text(LOCTEXT("Materials", "Materials"))
                         .ToolTipText(LOCTEXT("MaterialsTooltip", "Analyze material resources (Ctrl+NumPad6)"))
-                        .OnClicked(this, &SOptiloggerWidget::OnAnalyzeMaterialsClicked)
+                        .OnClicked(FOnClicked::CreateSP(this, &SOptiloggerWidget::OnAnalysisTypeClicked, FString(TEXT("Materials"))))
                         .HAlign(HAlign_Fill)
                     ]
 
@@ -315,7 +330,7 @@ TSharedRef<SWidget> SOptiloggerWidget::CreateControlsPanel()
                         SNew(SButton)
                         .Text(LOCTEXT("Animations", "Animations"))
                         .ToolTipText(LOCTEXT("AnimationsTooltip", "Analyze animation resources (Ctrl+NumPad7)"))
-                        .OnClicked(this, &SOptiloggerWidget::OnAnalyzeAnimationsClicked)
+                        .OnClicked(FOnClicked::CreateSP(this, &SOptiloggerWidget::OnAnalysisTypeClicked, FString(TEXT("Animations"))))
                         .HAlign(HAlign_Fill)
                     ]
 
@@ -324,7 +339,7 @@ TSharedRef<SWidget> SOptiloggerWidget::CreateControlsPanel()
                         SNew(SButton)
                         .Text(LOCTEXT("Audio", "Audio"))
                         .ToolTipText(LOCTEXT("AudioTooltip", "Analyze audio resources (Ctrl+NumPad8)"))
-                        .OnClicked(this, &SOptiloggerWidget::OnAnalyzeAudioClicked)
+                        .OnClicked(FOnClicked::CreateSP(this, &SOptiloggerWidget::OnAnalysisTypeClicked, FString(TEXT("Audio"))))
                         .HAlign(HAlign_Fill)
                     ]
 
@@ -334,7 +349,7 @@ TSharedRef<SWidget> SOptiloggerWidget::CreateControlsPanel()
                         SNew(SButton)
                         .Text(LOCTEXT("Lighting", "Lighting"))
                         .ToolTipText(LOCTEXT("LightingTooltip", "Analyze lighting resources (Ctrl+NumPad9)"))
-                        .OnClicked(this, &SOptiloggerWidget::OnAnalyzeLightingClicked)
+                        .OnClicked(FOnClicked::CreateSP(this, &SOptiloggerWidget::OnAnalysisTypeClicked, FString(TEXT("Lighting"))))
                         .HAlign(HAlign_Fill)
                     ]
 
@@ -343,7 +358,7 @@ TSharedRef<SWidget> SOptiloggerWidget::CreateControlsPanel()
                         SNew(SButton)
                         .Text(LOCTEXT("PostProcess", "Post-Process"))
                         .ToolTipText(LOCTEXT("PostProcessTooltip", "Analyze post-process effects (Ctrl+NumPad0)"))
-                        .OnClicked(this, &SOptiloggerWidget::OnAnalyzePostProcessClicked)
+                        .OnClicked(FOnClicked::CreateSP(this, &SOptiloggerWidget::OnAnalysisTypeClicked, FString(TEXT("PostProcess"))))
                         .HAlign(HAlign_Fill)
                     ]
                 ]
@@ -397,54 +412,6 @@ TSharedRef<SWidget> SOptiloggerWidget::CreateAnalysisResultsPanel()
                 )
             ]
         ];
-}
-
-FReply SOptiloggerWidget::OnAnalyzeStaticMeshesClicked()
-{
-    TriggerAnalysisAndRefreshUI(TEXT("StaticMeshes"));
-    return FReply::Handled();
-}
-
-FReply SOptiloggerWidget::OnAnalyzeSkeletalMeshesClicked()
-{
-    TriggerAnalysisAndRefreshUI(TEXT("SkeletalMeshes"));
-    return FReply::Handled();
-}
-
-FReply SOptiloggerWidget::OnAnalyzeTexturesClicked()
-{
-    TriggerAnalysisAndRefreshUI(TEXT("Textures"));
-    return FReply::Handled();
-}
-
-FReply SOptiloggerWidget::OnAnalyzeMaterialsClicked()
-{
-    TriggerAnalysisAndRefreshUI(TEXT("Materials"));
-    return FReply::Handled();
-}
-
-FReply SOptiloggerWidget::OnAnalyzeAnimationsClicked()
-{
-    TriggerAnalysisAndRefreshUI(TEXT("Animations"));
-    return FReply::Handled();
-}
-
-FReply SOptiloggerWidget::OnAnalyzeAudioClicked()
-{
-    TriggerAnalysisAndRefreshUI(TEXT("Audio"));
-    return FReply::Handled();
-}
-
-FReply SOptiloggerWidget::OnAnalyzeLightingClicked()
-{
-    TriggerAnalysisAndRefreshUI(TEXT("Lighting"));
-    return FReply::Handled();
-}
-
-FReply SOptiloggerWidget::OnAnalyzePostProcessClicked()
-{
-    TriggerAnalysisAndRefreshUI(TEXT("PostProcess"));
-    return FReply::Handled();
 }
 
 FReply SOptiloggerWidget::OnExportReportClicked()
@@ -506,7 +473,7 @@ TSharedRef<ITableRow> SOptiloggerWidget::OnGenerateRowForAnalysisResult(
     // Ahora usamos nuestra clase de fila personalizada:
     return SNew(SAnalysisResultRow, OwnerTable)
         .Item(Item)
-        .OwnerWidget(this);
+        .OwnerWidget(SharedThis(this));
 }
 
 TSharedRef<SWidget> SOptiloggerWidget::OnGenerateWidgetForColumn(
@@ -548,7 +515,8 @@ void SOptiloggerWidget::PopulateAnalysisResults()
     AnalysisResultItems.Empty();
     
     UResourceAnalyzer* Analyzer = GetResourceAnalyzer();
-    if (!Analyzer || !OptiloggerSubsystem)
+    UOptiloggerSubsystem* Subsystem = GetOptiloggerSubsystem();
+    if (!Analyzer || !Subsystem)
     {
         if (AnalysisResultsListView.IsValid())
         {
@@ -557,7 +525,7 @@ void SOptiloggerWidget::PopulateAnalysisResults()
         return;
     }
     
-    const FString AnalysisTypeToShow = OptiloggerSubsystem->GetLastAnalysisType();
+    const FString AnalysisTypeToShow = Subsystem->GetLastAnalysisType();
     const bool bShowAll = AnalysisTypeToShow.IsEmpty() || AnalysisTypeToShow == TEXT("CurrentLevel");
 
     if (bShowAll || AnalysisTypeToShow == TEXT("StaticMeshes"))
@@ -722,11 +690,14 @@ void SOptiloggerWidget::RefreshDisplay()
 
 UOptiloggerSubsystem* SOptiloggerWidget::GetOptiloggerSubsystem() const
 {
-    if (GEngine)
-    {
-        return GEditor->GetEditorSubsystem<UOptiloggerSubsystem>();
-    }
-    return nullptr;
+	// Resolved from the weak handle cached in Construct rather than re-queried every call.
+	// The previous version guarded on GEngine and then dereferenced GEditor.
+	if (UOptiloggerSubsystem* Cached = OptiloggerSubsystem.Get())
+	{
+		return Cached;
+	}
+
+	return GEditor ? GEditor->GetEditorSubsystem<UOptiloggerSubsystem>() : nullptr;
 }
 
 UResourceAnalyzer* SOptiloggerWidget::GetResourceAnalyzer() const
@@ -740,11 +711,7 @@ UResourceAnalyzer* SOptiloggerWidget::GetResourceAnalyzer() const
 
 bool SOptiloggerWidget::IsAnalyzerAvailable() const
 {
-    if (GEditor)
-    {
-        return GEditor->GetEditorSubsystem<UOptiloggerSubsystem>() != nullptr;
-    }
-    return false;
+	return GetResourceAnalyzer() != nullptr;
 }
 
 FText SOptiloggerWidget::GetAnalysisSummaryText() const
@@ -809,57 +776,52 @@ FText SOptiloggerWidget::GetAnalysisSummaryText() const
 
 FLinearColor SOptiloggerWidget::GetMemoryUsageColor(float MemoryUsageMB) const
 {
-    if (MemoryUsageMB < 1.0f)
-    {
-        return SuccessColor;
-    }
-    else if (MemoryUsageMB < 10.0f)
-    {
-        return NormalTextColor;
-    }
-    else if (MemoryUsageMB < 50.0f)
-    {
-        return WarningColor;
-    }
-    else
-    {
-        return ErrorColor;
-    }
+	if (MemoryUsageMB < MemoryColorLowMB)
+	{
+		return SuccessColor;
+	}
+	if (MemoryUsageMB < MemoryColorModerateMB)
+	{
+		return NormalTextColor;
+	}
+	if (MemoryUsageMB < MemoryColorHighMB)
+	{
+		return WarningColor;
+	}
+	return ErrorColor;
 }
 
 FString SOptiloggerWidget::FormatMemorySize(float MemoryMB) const
 {
-    if (MemoryMB < 1.0f)
-    {
-        return FString::Printf(TEXT("%.1f KB"), MemoryMB * 1024.0f);
-    }
-    else if (MemoryMB < 1024.0f)
-    {
-        return FString::Printf(TEXT("%.1f MB"), MemoryMB);
-    }
-    else
-    {
-        return FString::Printf(TEXT("%.2f GB"), MemoryMB / 1024.0f);
-    }
+	if (MemoryMB < 1.0f)
+	{
+		return FString::Printf(TEXT("%.1f KB"), MemoryMB * KilobytesPerMegabyte);
+	}
+	if (MemoryMB < MegabytesPerGigabyte)
+	{
+		return FString::Printf(TEXT("%.1f MB"), MemoryMB);
+	}
+	return FString::Printf(TEXT("%.2f GB"), MemoryMB / MegabytesPerGigabyte);
 }
 
 ECheckBoxState SOptiloggerWidget::IsFilterChecked() const
 {
-    if (OptiloggerSubsystem)
-    {
-        return OptiloggerSubsystem->IsFilterByVisible() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
-    }
-    return ECheckBoxState::Unchecked;
+	if (const UOptiloggerSubsystem* Subsystem = GetOptiloggerSubsystem())
+	{
+		return Subsystem->IsFilterByVisible() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+	}
+	return ECheckBoxState::Unchecked;
 }
 
 void SOptiloggerWidget::OnFilterChanged(ECheckBoxState NewState)
 {
-    if (OptiloggerSubsystem)
-    {
-        OptiloggerSubsystem->SetFilterByVisible(NewState == ECheckBoxState::Checked);
-
-        OnRefreshClicked();
-    }
+	if (UOptiloggerSubsystem* Subsystem = GetOptiloggerSubsystem())
+	{
+		// SetFilterByVisible already re-runs the last analysis under the new filter. The
+		// OnRefreshClicked() that followed ran the whole pass a second time on every toggle.
+		Subsystem->SetFilterByVisible(NewState == ECheckBoxState::Checked);
+		RefreshDisplay();
+	}
 }
 
 
