@@ -8,6 +8,14 @@
 #include "Components/LightComponent.h"
 #include "ResourceAnalyzer.generated.h"
 
+class APostProcessVolume;
+class UAnimSequence;
+class UMaterial;
+class USkeletalMesh;
+class USoundWave;
+class UStaticMesh;
+class UTexture2D;
+
 // Estructura de datos para el análisis de Static Meshes
 USTRUCT(BlueprintType)
 struct FStaticMeshAnalysisData
@@ -282,36 +290,39 @@ public:
     const TArray<FPostProcessAnalysisData>& GetPostProcessAnalysisResults() const { return PostProcessAnalysisResults; }
 
 private:
-    // Funciones de análisis de assets individuales
-    FStaticMeshAnalysisData AnalyzeStaticMeshAsset(UStaticMesh* StaticMesh);
-    FSkeletalMeshAnalysisData AnalyzeSkeletalMeshAsset(USkeletalMesh* SkeletalMesh);
-    FTextureAnalysisData AnalyzeTextureAsset(UTexture2D* Texture);
-    FMaterialAnalysisData AnalyzeMaterialAsset(UMaterial* Material);
-    FAnimationAnalysisData AnalyzeAnimationAsset(UAnimSequence* Animation);
-    FAudioAnalysisData AnalyzeAudioAsset(USoundWave* SoundWave);
-    FLightingAnalysisData AnalyzeLightComponent(ULightComponent* LightComponent);
-    FPostProcessAnalysisData AnalyzePostProcessVolume(class APostProcessVolume* PostProcessVolume);
+    // Per-asset analysis. Const: these read the asset and return a value, touching no state
+    // on the analyzer itself.
+    FStaticMeshAnalysisData AnalyzeStaticMeshAsset(UStaticMesh* StaticMesh) const;
+    FSkeletalMeshAnalysisData AnalyzeSkeletalMeshAsset(USkeletalMesh* SkeletalMesh) const;
+    FTextureAnalysisData AnalyzeTextureAsset(UTexture2D* Texture) const;
+    FMaterialAnalysisData AnalyzeMaterialAsset(UMaterial* Material) const;
+    FAnimationAnalysisData AnalyzeAnimationAsset(UAnimSequence* Animation) const;
+    FAudioAnalysisData AnalyzeAudioAsset(USoundWave* SoundWave) const;
+    FLightingAnalysisData AnalyzeLightComponent(ULightComponent* LightComponent) const;
+    FPostProcessAnalysisData AnalyzePostProcessVolume(APostProcessVolume* PostProcessVolume) const;
 
-    // Helpers de estimación de memoria
-    float EstimateTextureMemoryUsage(int32 Width, int32 Height, TextureCompressionSettings CompressionSettings, int32 MipLevels);
-    float EstimateStaticMeshMemoryUsage(int32 VertexCount, int32 TriangleCount);
-    float EstimateSkeletalMeshMemoryUsage(int32 VertexCount, int32 BoneCount);
+    // Memory estimation. Static: pure functions of their arguments. See the constants block
+    // in ResourceAnalyzer.cpp for what each figure assumes.
+    static float EstimateTextureMemoryUsage(int32 Width, int32 Height, TextureCompressionSettings CompressionSettings, int32 MipLevels);
+    static float EstimateStaticMeshMemoryUsage(int32 VertexCount, int32 TriangleCount);
+    static float EstimateSkeletalMeshMemoryUsage(int32 VertexCount, int32 BoneCount);
 
-    // Helpers de conversión a JSON
-    TSharedPtr<FJsonObject> StaticMeshDataToJson(const FStaticMeshAnalysisData& Data);
-    TSharedPtr<FJsonObject> SkeletalMeshDataToJson(const FSkeletalMeshAnalysisData& Data);
-    TSharedPtr<FJsonObject> TextureDataToJson(const FTextureAnalysisData& Data);
-    TSharedPtr<FJsonObject> MaterialDataToJson(const FMaterialAnalysisData& Data);
-    TSharedPtr<FJsonObject> AnimationDataToJson(const FAnimationAnalysisData& Data);
-    TSharedPtr<FJsonObject> AudioDataToJson(const FAudioAnalysisData& Data);
-    TSharedPtr<FJsonObject> LightingDataToJson(const FLightingAnalysisData& Data);
-    TSharedPtr<FJsonObject> PostProcessDataToJson(const FPostProcessAnalysisData& Data);
-    
-    // Helpers de utilidad
-    FString GetCompressionFormatString(TextureCompressionSettings CompressionSettings);
-    FString GetMobilityString(EComponentMobility::Type Mobility);
-    FString GetLightTypeString(ULightComponent* LightComponent);
+    // JSON conversion
+    TSharedPtr<FJsonObject> StaticMeshDataToJson(const FStaticMeshAnalysisData& Data) const;
+    TSharedPtr<FJsonObject> SkeletalMeshDataToJson(const FSkeletalMeshAnalysisData& Data) const;
+    TSharedPtr<FJsonObject> TextureDataToJson(const FTextureAnalysisData& Data) const;
+    TSharedPtr<FJsonObject> MaterialDataToJson(const FMaterialAnalysisData& Data) const;
+    TSharedPtr<FJsonObject> AnimationDataToJson(const FAnimationAnalysisData& Data) const;
+    TSharedPtr<FJsonObject> AudioDataToJson(const FAudioAnalysisData& Data) const;
+    TSharedPtr<FJsonObject> LightingDataToJson(const FLightingAnalysisData& Data) const;
+    TSharedPtr<FJsonObject> PostProcessDataToJson(const FPostProcessAnalysisData& Data) const;
 
+    // Enum-to-string helpers
+    static FString GetCompressionFormatString(TextureCompressionSettings CompressionSettings);
+    static FString GetMobilityString(EComponentMobility::Type Mobility);
+    static FString GetLightTypeString(ULightComponent* LightComponent);
+
+    /** True if any corner of the actor's bounds projects onto the active view. Ignores occlusion. */
     bool IsActorVisibleToCamera(AActor* Actor) const;
 
     // Almacenamiento de resultados
