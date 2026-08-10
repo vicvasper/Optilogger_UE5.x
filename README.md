@@ -5,7 +5,7 @@
 [![Version](https://img.shields.io/badge/Version-1.0-orange.svg)](https://github.com/yourusername/OptiLogger/releases)
 
 
-## Screenshots
+## Screenshots 
 
 ![Main Window]</br></br>
 <img width="951" height="578" alt="image" src="https://github.com/user-attachments/assets/b3054e8d-1926-48c1-afa3-bbdb4a587aae" /></br>
