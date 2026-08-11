@@ -215,7 +215,7 @@ Example structure:
 
 ## Performance Considerations
 
-- Analysis is non-blocking and runs on the game thread
+- Analysis runs synchronously on the game thread and blocks the editor while it completes
 - Large levels may take several seconds to analyze
 - Visibility filtering significantly reduces analysis time in complex scenes
 - Results are cached until cleared or refreshed
