@@ -58,7 +58,7 @@ Non-intrusive resource analysis and optimization plugin for Unreal Engine 5.x. P
 
 ### Clone the Repository
 ```bash
-git clone https://github.com/vicvasper/Optilogger_UE5.3.git
+git clone https://github.com/vicvasper/Optilogger_UE5.x.git
 ```
 
 ### Install to Project
