@@ -1,7 +1,6 @@
 # OptiLogger
 
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.x-blue.svg)](https://www.unrealengine.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-1.0-orange.svg)](https://github.com/yourusername/OptiLogger/releases)
 
 
