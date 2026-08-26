@@ -278,10 +278,6 @@ To add new analysis categories:
 - Hotkey support
 - Editor UI integration
 
-## License
-
-MIT License - See LICENSE file for details
-
 ## Author
 
 Created by Victor Rivas ([@vicvasper](https://github.com/vicvasper))
